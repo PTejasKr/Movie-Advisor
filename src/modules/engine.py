@@ -4,7 +4,6 @@ try:
     import numpy as np
     from sklearn.preprocessing import MultiLabelBinarizer
     from sklearn.metrics import jaccard_score
-    from scripts.watched_movies import catch_watched_movies
     from termcolor import colored
     
 except ImportError as error:
@@ -36,11 +35,21 @@ def recommender_movies(user_id, db_path, user_input, filter_watched, filter_top_
         encoders[features[i]].transform([user_input[i]]) for i in range(len(features))
     ]).flatten()
 
-    # filter watched movies(if true)
-    if filter_watched:
-        watched_movies = catch_watched_movies(db_path, user_id) if filter_watched else []
-        df = df[~df["movie_id"].isin(watched_movies)]
-        X = X[df.index]
+    # filter watched movies(if true) - only if we have a real user_id
+    if filter_watched and user_id is not None:
+        try:
+            # This requires a real user_id to get watched movies
+            from scripts.watched_movies import catch_watched_movies
+            watched_movies = catch_watched_movies(db_path, user_id)
+            df = df[~df["movie_id"].isin(watched_movies)]
+            X = X[df.index]
+        except ImportError:
+            # If we can't import watched_movies, just continue without filtering
+            print("Note: Watched movies filter not available without login")
+            pass
+    elif filter_watched and user_id is None:
+        # If filter_watched is True but user_id is None, warn user
+        print("Note: Watched movies filter disabled (no user data available)")
 
     similarities = [jaccard_score(user_vector, X[i]) for i in range(len(X))]
     df["similarity"] = similarities
