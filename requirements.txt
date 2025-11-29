@@ -1,0 +1,6 @@
+flask
+termcolor
+python-dotenv
+pandas
+numpy
+scikit-learn
